@@ -1,0 +1,90 @@
+#!/bin/bash
+# EasySSL 1.0.0 (c) 2025 by Sensei & Burixon
+# Easily generate public and private SSL certificates for e.g. socat or other applications to encrypt transmission between two or more computers.
+#
+# Thanks to:
+# http://www.dest-unreach.org/socat/doc/socat-openssltunnel.html
+# and
+# https://unix.stackexchange.com/questions/448837/create-https-server-with-socat
+
+help() {
+	echo "EasySSL (c) 2025 by Sensei & Burixon"
+	echo "Easily generate public and private SSL certificates for e.g. socat or other applications."
+	echo
+	echo "Usage:"
+	echo "easyssl [-v|--verbose] [-q|--quiet] [-b|--bits <bits>] [-ca|--common-name <common-name>] [-d|--days <days>] [-o|--output-dir <output-dir>] [-f|--force] [--format <pem|crt>] <name>"
+	echo
+	echo "Examples for socat are available in the full documentation:"
+	echo -e "\e[1;4;36mhttps://github.com/BuriXon-code/EasySSL\e[0m"
+}
+
+VERBOSE=1
+BITS=2048
+COMMON_NAME=localhost
+DAYS=3653
+OUTPUT_DIR=
+NAME=
+FORCE=0
+CERT_FORMAT=default  # 'default' = .key + .crt + .pem
+
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		-h|--help) help; exit ;;
+		-v|--verbose) VERBOSE=1 ;;
+		-q|--quiet) VERBOSE=0 ;;
+		-b|--bits) shift; BITS="$1" ;;
+		-ca|--common-name) shift; COMMON_NAME="$1" ;;
+		-d|--days) shift; DAYS="$1" ;;
+		-o|--output-directory) shift; OUTPUT_DIR="$1" ;;
+		-f|--force) FORCE=1 ;;
+		--format) shift; CERT_FORMAT="$1" ;;
+		-*) echo >&2 "Unknown option: $1"; echo; help; exit 1 ;;
+		*) NAME=$1 ;;
+	esac
+	shift
+done
+
+if [[ -z "$NAME" ]]; then
+	echo >&2 "The required argument is missing!"
+	exit 1
+fi
+
+if [[ "$CERT_FORMAT" != "default" && "$CERT_FORMAT" != "pem" && "$CERT_FORMAT" != "crt" ]]; then
+	echo >&2 "Invalid format: $CERT_FORMAT. Allowed: pem, crt"
+	exit 1
+fi
+
+if [[ -n "$OUTPUT_DIR" ]]; then
+	mkdir -p "$OUTPUT_DIR" || { echo >&2 "Cannot create output directory: $OUTPUT_DIR"; exit 1; }
+	cd "$OUTPUT_DIR" || { echo >&2 "Cannot enter output directory: $OUTPUT_DIR"; exit 1; }
+fi
+
+declare -a FILES_TO_CHECK=()
+
+[[ "$CERT_FORMAT" != "pem" ]] && FILES_TO_CHECK+=("$NAME.key" "$NAME.crt")
+[[ "$CERT_FORMAT" == "default" ]] && FILES_TO_CHECK+=("$NAME.pem")
+[[ "$CERT_FORMAT" == "pem" ]] && FILES_TO_CHECK+=("$NAME.pem")
+
+for FILE in "${FILES_TO_CHECK[@]}"; do
+	if [[ -f "$FILE" && $FORCE -eq 0 ]]; then
+		read -rp "$FILE exists. Overwrite? (y/N): " confirm
+		[[ "$confirm" =~ ^[Yy]$ ]] || { echo >&2 "Aborted."; exit 1; }
+	fi
+done
+
+[[ $VERBOSE -ge 1 ]] && echo >&2 "Generating $NAME.key.."
+openssl genrsa -out "$NAME.key" "$BITS"
+chmod 600 "$NAME.key"
+
+[[ $VERBOSE -ge 1 ]] && echo >&2 "Generating $NAME.crt.."
+openssl req -new -key "$NAME.key" -x509 -days "$DAYS" -subj "/CN=$COMMON_NAME" -out "$NAME.crt"
+chmod 644 "$NAME.crt"
+
+if [[ "$CERT_FORMAT" == "pem" || "$CERT_FORMAT" == "default" ]]; then
+	[[ $VERBOSE -ge 1 ]] && echo >&2 "Generating $NAME.pem.."
+	cat "$NAME.key" "$NAME.crt" >"$NAME.pem"
+	chmod 600 "$NAME.pem"
+fi
+
+[[ $VERBOSE -ge 1 ]] && echo >&2 "Done"
+[[ $VERBOSE -ge 1 ]] && echo >&2 "Remember to change the owner with chown!"
