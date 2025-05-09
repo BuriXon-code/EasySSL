@@ -46,6 +46,7 @@ done
 
 if ! command -v openssl &>/dev/null; then
 echo >&2 "The required package \"openssl\" is not installed."
+exit 1
 fi
 
 if [[ -z "$NAME" ]]; then
