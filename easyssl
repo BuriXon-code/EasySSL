@@ -44,6 +44,10 @@ while [[ $# -gt 0 ]]; do
 	shift
 done
 
+if ! command -v openssl &>/dev/null; then
+echo >&2 "The required package \"openssl\" is not installed."
+fi
+
 if [[ -z "$NAME" ]]; then
 	echo >&2 "The required argument is missing!"
 	exit 1
