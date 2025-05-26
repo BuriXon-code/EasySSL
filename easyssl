@@ -1,6 +1,8 @@
 #!/bin/bash
-# EasySSL 1.0.0 (c) 2025 by Sensei & Burixon
+# EasySSL 1.0.2 (c) 2025 by Sensei & Burixon
 # Easily generate public and private SSL certificates for e.g. socat or other applications to encrypt transmission between two or more computers.
+# If you find this script useful, consider supporting my work by making a donation:
+# https://burixon.com.pl/donate/
 #
 # Thanks to:
 # http://www.dest-unreach.org/socat/doc/socat-openssltunnel.html
@@ -8,13 +10,35 @@
 # https://unix.stackexchange.com/questions/448837/create-https-server-with-socat
 
 help() {
-	echo "EasySSL (c) 2025 by Sensei & Burixon"
+	echo "EasySSL 1.0.2 (c) 2025 by Sensei & Burixon"
 	echo "Easily generate public and private SSL certificates for e.g. socat or other applications."
+	echo "If you find this script useful, consider supporting my work by making a donation:"
+	echo "https://burixon.com.pl/donate/"
 	echo
 	echo "Usage:"
 	echo "easyssl [-v|--verbose] [-q|--quiet] [-b|--bits <bits>] [-ca|--common-name <common-name>] [-d|--days <days>] [-o|--output-dir <output-dir>] [-f|--force] [--format <pem|crt>] <name>"
 	echo
-	echo "Examples for socat are available in the full documentation:"
+	echo "EasySSL usage with socat (remember to copy files between peers and edit the /etc/hosts file):"
+	echo
+	echo "The most basic example:"
+	echo "easyssl <name>"
+	echo "[server side] socat OPENSSL-LISTEN:<port>,cert=<name>.pem,cafile=<name>.crt STDIO"
+	echo "[client side] socat STDIO OPENSSL:localhost:<port>,cert=<name>.pem,cafile=<name>.crt"
+	echo
+	echo "Example of a server/client with different certificates (<server-hostname> must be in the /etc/hosts file):"
+	echo "easyssl -ca <server-hostname> <server>"
+	echo "easyssl <client>"
+	echo "[server side] socat OPENSSL-LISTEN:<port>,cert=<server>.pem,cafile=<client>.crt STDIO"
+	echo "[client side] socat STDIO OPENSSL:<server-hostname>:<port>,cert=<client>.pem,cafile=<server>.crt"
+	echo
+	echo "Example of a server/client with different certificates with tunneling (<server-hostname> must equal <tunnel-hostname> and be in the /etc/hosts file):"
+	echo "easyssl -ca <server-hostname> <server>"
+	echo "easyssl <client>"
+	echo "[server side] socat OPENSSL-LISTEN:<port>,cert=<server>.pem,cafile=<client>.crt STDIO"
+	echo "[tunnel side] socat TCP-LISTEN:<tunnel-port> TCP-CONNECT:<server-hostname>:<port>"
+	echo "[client side] socat STDIO OPENSSL:<host>:<tunnel-port>,cert=<client>.pem,cafile=<server>.crt"
+	echo
+	echo "More examples for socat are available in the full documentation:"
 	echo -e "\e[1;4;36mhttps://github.com/BuriXon-code/EasySSL\e[0m"
 }
 
